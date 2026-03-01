@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Confirmación de Recogida</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    html, body {
+      background-color: #121212;
+      color: white;
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      text-align: center;
+    }
+    .descripcion {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 20px 0;
+      letter-spacing: 1px;
+    }
+    .contenedor {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 10px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    input[type="text"] {
+      font-size: 16px;
+      padding: 10px;
+      margin: 1px 0;
+      border-radius: 8px;
+      border: none;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .boton-foto, #compartirBtn, #guardarBtn {
+      background-color: #fcbb18;
+      color: #ffffff;
+      font-weight: bold;
+      border-radius: 10px;
+      padding: 10px 20px;
+      margin: 8px 5px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: inset 1px 1px 4px rgba(0,0,0,0.2), 3px 3px 8px rgba(0,0,0,0.3);
+      transition: transform 0.2s, background-color 0.3s, color 0.3s;
+      width: 100%;
+      max-width: 400px;
+      user-select: none;
+    }
+    .boton-foto:hover:not(.activo):not(.tomado), #compartirBtn:hover:not(:disabled), #guardarBtn:hover:not(.guardado) {
+      transform: scale(1.05);
+    }
+    #compartirBtn:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .boton-foto.activo {
+      background-color: #f39c12;
+      color: white;
+    }
+    .boton-foto.tomado, #guardarBtn.guardado {
+      background-color: #FF0000;
+      color: white;
+    }
+    .imagenes-previas {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+      max-width: 500px;
+      width: 100%;
+    }
+    .imagenes-previas div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 150px;
+    }
+    .imagenes-previas img {
+      width: 150px;
+      height: auto;
+      border-radius: 8px;
+      border: 2px solid white;
+      object-fit: contain;
+      cursor: pointer; /* Indica que se puede hacer clic */
+      transition: transform 0.2s;
+    }
+    .imagenes-previas img:hover {
+      transform: scale(1.05);
+      border-color: #fcbb18;
+    }
+    .caption {
+      font-size: 12px;
+      margin-top: 4px;
+      color: #fff;
+      max-width: 150px;
+      word-wrap: break-word;
+    }
+    .btn-eliminar {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      margin-top: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .caption-boton {
+      font-size: 12px;
+      margin: 0 0 10px 0;
+      max-width: 400px;
+      color: #fff;
+      margin: 0 auto;
+      word-wrap: break-word;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    
+    /* Modal para Alertas Personalizadas */
+    .modal-alerta {
+      display: none; 
+      position: fixed; 
+      top: 0; left: 0; 
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); 
+      z-index: 9999; 
+      justify-content: center; 
+      align-items: center;
+    }
+    .modal-alerta-content {
+      background: #222; 
+      padding: 20px; 
+      border-radius: 10px; 
+      border: 2px solid #fcbb18; 
+      max-width: 80%;
+      text-align: center;
+    }
+
+    /* NUEVO: Modal para ver imagen en pantalla completa */
+    .modal-imagen {
+      display: none; 
+      position: fixed; 
+      top: 0; left: 0; 
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.95); 
+      z-index: 10000; 
+      justify-content: center; 
+      align-items: center;
+      flex-direction: column;
+    }
+    .modal-imagen img {
+      max-width: 95%;
+      max-height: 80%;
+      border-radius: 8px;
+      border: 2px solid #fcbb18;
+      object-fit: contain;
+    }
+    .cerrar-imagen-btn {
+      margin-top: 20px;
+      background-color: #fcbb18;
+      color: black;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    #qrContainer {
+      margin-top: 20px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      background: #1e1e1e;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #fcbb18;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="modal-alerta" id="modalAlerta">
+    <div class="modal-alerta-content">
+      <p id="textoAlerta" style="color: white; font-weight: bold; margin-bottom: 20px;"></p>
+      <button onclick="cerrarAlerta()" style="background:#fcbb18; color:#000; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">Entendido</button>
+    </div>
+  </div>
+
+  <div class="modal-imagen" id="modalImagen">
+    <img id="imagenExpandida" src="" alt="Imagen Completa">
+    <button class="cerrar-imagen-btn" onclick="cerrarImagen()">Volver</button>
+  </div>
+
+  <div id="appContainer">
+    <p class="descripcion">FORMULARIO ÚNICO PARA CONDUCTORES</p>
+    <p>¡Bienvenido a ToliTecno! Para brindarte un servicio seguro y eficiente, debes llenar <strong>completamente el formulario de registro</strong>, subiendo fotos claras y en tiempo real o los documentos solicitados. Una vez envíes tu solicitud, <strong>recibirás una notificación confirmando tu ingreso</strong> en un plazo de 3 días hábiles. ¡Gracias por confiar en nosotros!</p>
+
+    <div class="contenedor">
+      <input type="text" id="nombreInput" placeholder="Nombre Completo" autocomplete="off" oninput="guardarEnLocal()" /><br />
+      <input type="text" id="matriculaInput" placeholder="Número de Matrícula del Vehículo" autocomplete="off" oninput="guardarEnLocal()" /><br />
+      <input type="text" id="telefonoInput" placeholder="Teléfono de Contacto" autocomplete="off" oninput="guardarEnLocal()" /><br />
+      <button id="guardarBtn" onclick="guardarDatos()">GUARDA LA INFORMACIÓN ESCRITA</button>
+
+      <input type="file" accept="image/*" capture="environment" id="cameraInput" />
+
+      <button class="boton-foto" data-tipo="selfie" onclick="tomarFoto(this)">Frontal documento de identidad</button>
+      <button class="boton-foto" data-tipo="frontal" onclick="tomarFoto(this)">Reverso documento de Identidad</button>
+      <button class="boton-foto" data-tipo="titulo" onclick="tomarFoto(this)">Licencia de conducir</button>
+      <button class="boton-foto" data-tipo="licencia" onclick="tomarFoto(this)">Soat</button>
+      <button class="boton-foto" data-tipo="certificado" onclick="tomarFoto(this)">Tu vehículo donde se vea la placa</button>
+      <div class="caption-boton">Procura que se vea la placa</div>
+      
+      <div class="imagenes-previas" id="imagenesPrevias"></div>
+
+      <div id="qrContainer"></div>
+
+      <p style="margin-top: 20px; color: #fff; font-size: 14px;">
+        RECUERDA COMPARTIR TODA LA DOCUMENTACIÓN AL CORREO, SOLO HAZ CLIC Y COPIALO, <strong>O SI ES DE TU PREFERENCIA COMPARTE TODO POR WHATSAPP</strong>
+        <span id="correoLink" onclick="copiarCorreo()" style="color: #fff; text-decoration: underline; cursor: pointer; font-weight: bold;">
+          info@tolitecno.com
+        </span>
+      </p>
+      <img src="https://i.imgur.com/i2TEA6v.png" alt="Compartir datos" style="max-width: 200px; margin-top: 20px;" />
+
+      <button id="compartirBtn" onclick="enviarYCompartir()">ENVIAR FORMULARIO</button>
+    </div>
+  </div>
+
+<script>
+// --- CONFIGURACIÓN DE FIREBASE ---
+firebase.initializeApp({
+  apiKey: "AIzaSyA9LJQetXeU8LTIF8_SQHnYd0qHZBXlqDo",
+  authDomain: "imagen-compartida.firebaseapp.com",
+  databaseURL: "https://imagen-compartida-default-rtdb.firebaseio.com",
+  projectId: "imagen-compartida"
+});
+const db = firebase.database();
+
+// --- FUNCIONES GLOBALES PARA EL MODAL DE IMAGEN ---
+function abrirImagen(src) {
+  document.getElementById('imagenExpandida').src = src;
+  document.getElementById('modalImagen').style.display = 'flex';
+}
+function cerrarImagen() {
+  document.getElementById('modalImagen').style.display = 'none';
+  document.getElementById('imagenExpandida').src = "";
+}
+
+// --- SISTEMA DE VISOR DE ENLACE ---
+const params = new URLSearchParams(window.location.search);
+const idVisor = params.get('id');
+
+if (idVisor) {
+  // Modo Visor: Ocultamos el formulario y mostramos los datos leídos de Firebase
+  document.getElementById('appContainer').innerHTML = '<h2 style="margin-top:50px;">Cargando registro...</h2>';
+  db.ref('registros/' + idVisor).once('value').then(snapshot => {
+    const data = snapshot.val();
+    if(!data) {
+      document.getElementById('appContainer').innerHTML = '<h2 style="margin-top:50px; color:red;">Registro no encontrado.</h2>';
+      return;
+    }
+    
+    let html = `<div class="contenedor" style="margin-top:20px;">
+                  <h2 style="color:#fcbb18; margin-bottom: 5px;">INFORMACIÓN DEL CONDUCTOR</h2>
+                  <div style="background:#1e1e1e; padding:15px; border-radius:10px; width:100%; margin-bottom:20px; border:1px solid #333;">
+                    <p style="margin:5px 0;"><strong>Nombre:</strong> ${data.nombre}</p>
+                    <p style="margin:5px 0;"><strong>Matrícula:</strong> ${data.matricula}</p>
+                    <p style="margin:5px 0;"><strong>Teléfono:</strong> ${data.telefono}</p>
+                  </div>
+                  <h3 style="color:#fcbb18;">Evidencias Adjuntas</h3>
+                  <p style="font-size:12px;">(Toca una imagen para ampliarla)</p>
+                  <div class="imagenes-previas" style="margin-top:10px;">`;
+    if(data.imagenes) {
+      data.imagenes.forEach(img => {
+        html += `<div>
+                  <img src="${img.dataUrl}" onclick="abrirImagen('${img.dataUrl}')" style="max-width:100%;">
+                  <div class="caption">${img.tipo.toUpperCase()}</div>
+                 </div>`;
+      });
+    }
+    html += `</div></div>`;
+    document.getElementById('appContainer').innerHTML = html;
+  }).catch(err => {
+    document.getElementById('appContainer').innerHTML = `<h2 style="margin-top:50px; color:red;">Error cargando datos.</h2>`;
+  });
+} else {
+
+  // --- MODO FORMULARIO NORMAL ---
+  let imagenes = [];
+  let matricula = "";
+  let nombre = "";
+  let telefono = "";
+
+  const cameraInput = document.getElementById('cameraInput');
+  const imagenesPreviasDiv = document.getElementById('imagenesPrevias');
+  const botonesFoto = document.querySelectorAll('.boton-foto');
+
+  // Función para Alerta Personalizada
+  function mostrarAlerta(mensaje) {
+    document.getElementById('textoAlerta').innerText = mensaje;
+    document.getElementById('modalAlerta').style.display = 'flex';
+  }
+  function cerrarAlerta() {
+    document.getElementById('modalAlerta').style.display = 'none';
+  }
+
+  // Cargar de LocalStorage al iniciar
+  window.onload = () => {
+    cargarDeLocal();
+  };
+
+  window.guardarEnLocal = function() {
+    matricula = document.getElementById('matriculaInput').value.trim().toUpperCase();
+    nombre = document.getElementById('nombreInput').value.trim();
+    telefono = document.getElementById('telefonoInput').value.trim();
+    
+    try {
+      localStorage.setItem('conductorDatos', JSON.stringify({ matricula, nombre, telefono, imagenes }));
+    } catch(e) {
+      console.warn("Límite de almacenamiento local alcanzado.");
+    }
+  }
+
+  function cargarDeLocal() {
+    const dataStr = localStorage.getItem('conductorDatos');
+    if (dataStr) {
+      const data = JSON.parse(dataStr);
+      document.getElementById('matriculaInput').value = data.matricula || "";
+      document.getElementById('nombreInput').value = data.nombre || "";
+      document.getElementById('telefonoInput').value = data.telefono || "";
+      matricula = data.matricula || "";
+      nombre = data.nombre || "";
+      telefono = data.telefono || "";
+      imagenes = data.imagenes || [];
+      
+      if (matricula && nombre && telefono) {
+        marcarBotonGuardado();
+      }
+      actualizarVistaImagenes();
+    }
+  }
+
+  window.guardarDatos = function() {
+    guardarEnLocal();
+    if (!matricula || !nombre || !telefono) {
+      mostrarAlerta("Por favor, ingrese el número de matrícula, el nombre completo y el teléfono de contacto.");
+      return;
+    }
+    marcarBotonGuardado();
+  }
+
+  function marcarBotonGuardado() {
+    const guardarBtn = document.getElementById('guardarBtn');
+    guardarBtn.textContent = "INFORMACIÓN ESCRITA GUARDADA";
+    guardarBtn.classList.add("guardado");
+  }
+
+  function marcarBotonActivo(boton) {
+    botonesFoto.forEach(btn => btn.classList.remove('activo'));
+    boton.classList.add('activo');
+  }
+
+  window.tomarFoto = function(boton) {
+    guardarEnLocal();
+    if (!matricula || !nombre || !telefono) {
+      mostrarAlerta("Por favor, guarde la información escrita antes de tomar la foto.");
+      return;
+    }
+    marcarBotonActivo(boton);
+    cameraInput.dataset.tipo = boton.dataset.tipo;
+    cameraInput.click();
+  }
+
+  cameraInput.addEventListener('change', function () {
+    const file = cameraInput.files[0];
+    const tipo = cameraInput.dataset.tipo;
+    if (!file || !tipo) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = async function() {
+        const fechaHora = obtenerFechaHora();
+        let ubicacion = "Ubicación desconocida";
+
+        try {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000
+            });
+          });
+          const { latitude, longitude } = pos.coords;
+          const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
+          const response = await fetch(url);
+          const data = await response.json();
+
+          const ciudad = data.address.city || data.address.town || data.address.village || "Ciudad desconocida";
+          const barrio = data.address.suburb || data.address.neighbourhood || "Barrio desconocido";
+          ubicacion = `${barrio}, ${ciudad}`;
+        } catch(e) {}
+
+        const dataUrl = dibujarTextoEnImagen(img, tipo, ubicacion, fechaHora);
+
+        imagenes = imagenes.filter(i => i.tipo !== tipo);
+        imagenes.push({ tipo, dataUrl, ubicacion, fechaHora });
+        
+        actualizarVistaImagenes();
+        guardarEnLocal();
+        cameraInput.value = '';
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function dibujarTextoEnImagen(img, tipo, ubicacion, fechaHora) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const maxWidth = 800;
+    const maxHeight = 600;
+    let ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+    if (ratio > 1) ratio = 1;
+
+    canvas.width = img.width * ratio;
+    canvas.height = img.height * ratio;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    ctx.font = "bold 18px Arial";
+    ctx.fillStyle = "white";
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 3;
+
+    const margen = 15;
+    const lineHeight = 24;
+    const texto1 = tipo.toUpperCase();
+    const texto2 = `Ubicación: ${ubicacion}`;
+    const texto3 = `Fecha: ${fechaHora}`;
+    const texto4 = `Matrícula: ${matricula}`;
+    const texto5 = `Cliente: ${nombre}`;
+    const texto6 = `Teléfono: ${telefono}`;
+
+    [texto1, texto2, texto3, texto4, texto5, texto6].forEach((t, i) => {
+      const y = canvas.height - lineHeight * (6 - i);
+      ctx.strokeText(t, margen, y);
+      ctx.fillText(t, margen, y);
+    });
+
+    // IMPORTANTE: Calidad 0.6 para que no sea tan pesado al subir a Firebase
+    return canvas.toDataURL('image/jpeg', 0.6);
+  }
+
+  function actualizarVistaImagenes() {
+    imagenesPreviasDiv.innerHTML = '';
+    botonesFoto.forEach(btn => {
+      btn.classList.remove('activo');
+      btn.classList.remove('tomado');
+    });
+
+    imagenes.forEach(imgData => {
+      const cont = document.createElement('div');
+      
+      const img = document.createElement('img');
+      img.src = imgData.dataUrl;
+      img.alt = imgData.tipo;
+      img.title = "Haz clic para expandir";
+      // Evento para abrir imagen en grande
+      img.onclick = function() {
+        abrirImagen(imgData.dataUrl);
+      };
+      
+      const caption = document.createElement('div');
+      caption.textContent = imgData.tipo.charAt(0).toUpperCase() + imgData.tipo.slice(1).replace(/_/g,' ');
+      caption.className = 'caption';
+      
+      const btnEliminar = document.createElement('button');
+      btnEliminar.textContent = 'Eliminar';
+      btnEliminar.className = 'btn-eliminar';
+      btnEliminar.onclick = function() {
+        imagenes = imagenes.filter(i => i.tipo !== imgData.tipo);
+        actualizarVistaImagenes();
+        guardarEnLocal();
+      };
+
+      cont.appendChild(img);
+      cont.appendChild(caption);
+      cont.appendChild(btnEliminar);
+      imagenesPreviasDiv.appendChild(cont);
+
+      const btnCorrespondiente = document.querySelector(`.boton-foto[data-tipo="${imgData.tipo}"]`);
+      if(btnCorrespondiente) btnCorrespondiente.classList.add('tomado');
+    });
+  }
+
+  function obtenerFechaHora() {
+    const ahora = new Date();
+    const dia = String(ahora.getDate()).padStart(2, '0');
+    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+    const anio = ahora.getFullYear();
+    const hora = String(ahora.getHours()).padStart(2, '0');
+    const min = String(ahora.getMinutes()).padStart(2, '0');
+    const seg = String(ahora.getSeconds()).padStart(2, '0');
+    return `${dia}/${mes}/${anio} ${hora}:${min}:${seg}`;
+  }
+
+  window.enviarYCompartir = async function() {
+    if (imagenes.length === 0) {
+      mostrarAlerta("No hay imágenes para enviar. Por favor, toma al menos una foto.");
+      return;
+    }
+    
+    guardarEnLocal();
+
+    const btn = document.getElementById('compartirBtn');
+    btn.textContent = "ENVIANDO... POR FAVOR ESPERA";
+    btn.disabled = true;
+
+    const idUnico = Date.now().toString();
+    const datosASubir = { matricula, nombre, telefono, imagenes };
+
+    // 1. Subir a Firebase
+    try {
+      await db.ref('registros/' + idUnico).set(datosASubir);
+      
+      // Generar URL del Visor (esta misma página + ID)
+      const urlBase = window.location.href.split('?')[0];
+      const urlVisor = `${urlBase}?id=${idUnico}`;
+      
+      // Generar QR usando una API pública confiable
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(urlVisor)}`;
+      
+      const qrContainer = document.getElementById('qrContainer');
+      qrContainer.style.display = 'flex';
+      qrContainer.innerHTML = `
+        <h3 style="color:#fcbb18; margin-top:0;">¡Subido Exitosamente!</h3>
+        <p style="font-size:12px; margin-bottom:10px;">Escanea este QR o usa el enlace para ver tu registro en la nube:</p>
+        <img src="${qrUrl}" alt="Código QR" style="border:5px solid white; border-radius:10px; width:150px; height:150px;">
+        <a href="${urlVisor}" target="_blank" style="color:#fcbb18; margin-top:10px; font-size:14px; word-break: break-all; text-decoration: underline;">Toca aquí para abrir tu comprobante</a>
+      `;
+
+      mostrarAlerta("Formulario guardado en la nube con éxito. Se ha generado tu enlace y código QR en la pantalla.");
+      
+    } catch (error) {
+      mostrarAlerta("Hubo un error al subir a la nube (puede que el archivo sea muy pesado): " + error.message);
+    } finally {
+      btn.textContent = "ENVIAR FORMULARIO";
+      btn.disabled = false;
+    }
+
+    // 2. Compartir Localmente (Archivos)
+    const ultimaPorTipo = {};
+    for (let i = imagenes.length - 1; i >= 0; i--) {
+      if (!ultimaPorTipo[imagenes[i].tipo]) {
+        ultimaPorTipo[imagenes[i].tipo] = imagenes[i];
+      }
+    }
+
+    const archivos = Object.values(ultimaPorTipo).map(({ dataUrl, tipo }) => {
+      const base64 = dataUrl.split(',')[1];
+      const bytes = atob(base64);
+      const arr = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) {
+        arr[i] = bytes.charCodeAt(i);
+      }
+      return new File([arr], `${tipo}.jpg`, { type: 'image/jpeg' });
+    });
+
+    if (navigator.share && archivos.length <= 10) {
+      try {
+        await navigator.share({
+          title: 'FORMULARIO CONDUCTORES',
+          text: `Matrícula: ${matricula}nCliente: ${nombre}nTeléfono: ${telefono}nnLas imágenes se comparten directamente a este enlace de grupo: https://t.me/+02U0lQsOuLI2NjQx`,
+          files: archivos
+        });
+        return;
+      } catch (err) {
+        console.warn("Compartir cancelado o no soportado:", err);
+      }
+    }
+  }
+
+  window.copiarCorreo = function() {
+    const correo = "info@tolitecno.com";
+    const enlace = document.getElementById("correoLink");
+
+    navigator.clipboard.writeText(correo).then(() => {
+      enlace.innerHTML = "<strong>¡Copiado!</strong>";
+      setTimeout(() => {
+        enlace.innerHTML = `<strong>${correo}</strong>`;
+      }, 2000);
+    }).catch(() => {
+      mostrarAlerta("No se pudo copiar el correo. Intenta manualmente.");
+    });
+  }
+}
+</script>
+
+</body>
+</html>
