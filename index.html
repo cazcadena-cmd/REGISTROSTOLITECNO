@@ -88,7 +88,10 @@ if(!id){
   data.imagenes.forEach(img=>{
 
     // Solo mostrar selfie y auto
-    if(img.tipo === "selfie" || img.tipo === "auto"){
+    if(
+  img.tipo === "Selfie" ||
+  img.tipo === "Foto del vehículo"
+){
 
       html += `
         <div class="card">
@@ -111,4 +114,5 @@ if(!id){
 
 </body>
 </html>
+
 
