@@ -85,15 +85,21 @@ if(!id){
     `;
 
     if(data.imagenes){
-      data.imagenes.forEach(img=>{
-        html += `
-          <div class="card">
-            <p><strong>${img.tipo.toUpperCase()}</strong></p>
-            <img src="${img.dataUrl}">
-          </div>
-        `;
-      });
+  data.imagenes.forEach(img=>{
+
+    // Solo mostrar selfie y auto
+    if(img.tipo === "selfie" || img.tipo === "auto"){
+
+      html += `
+        <div class="card">
+          <p><strong>${img.tipo.toUpperCase()}</strong></p>
+          <img src="${img.dataUrl}">
+        </div>
+      `;
     }
+
+  });
+}
 
     document.getElementById("contenido").innerHTML = html;
 
@@ -105,3 +111,4 @@ if(!id){
 
 </body>
 </html>
+
